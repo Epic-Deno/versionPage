@@ -63,9 +63,9 @@
             :columns="inspectionColumns"
             :data-source="inspectionData"
             :pagination="false"
-            :scroll="{ y: 180 }"
+            :scroll="{ y: tableScrollY.inspection }"
             size="small"
-            class="dark-table"
+            class="dark-table table-scroll"
           >
             <template slot="result" slot-scope="text">
               <span :class="['status-tag', getResultClass(text)]">{{ text }}</span>
@@ -89,9 +89,9 @@
             :columns="firstPassColumns"
             :data-source="firstPassData"
             :pagination="false"
-            :scroll="{ y: 150 }"
+            :scroll="{ y: tableScrollY.firstPass }"
             size="small"
-            class="dark-table"
+            class="dark-table table-scroll"
           >
             <template slot="rate" slot-scope="text">
               <span class="highlight-orange">{{ text }}</span>
@@ -114,9 +114,9 @@
             :columns="productionLineColumns"
             :data-source="productionLineData"
             :pagination="false"
-            :scroll="{ y: 280 }"
+            :scroll="{ y: tableScrollY.production }"
             size="small"
-            class="dark-table"
+            class="dark-table table-scroll"
           >
             <template slot="status" slot-scope="text">
               <span v-if="text" :class="['status-tag', getStatusClass(text)]">{{ text }}</span>
@@ -239,9 +239,9 @@
             :columns="maintenanceColumns"
             :data-source="maintenanceData"
             :pagination="false"
-            :scroll="{ y: 180 }"
+            :scroll="{ y: tableScrollY.maintenance }"
             size="small"
-            class="dark-table"
+            class="dark-table table-scroll"
           >
             <template slot="status" slot-scope="text">
               <span :class="['status-tag', getMaintenanceStatusClass(text)]">{{ text }}</span>
@@ -265,9 +265,9 @@
             :columns="alarmColumns"
             :data-source="alarmData"
             :pagination="false"
-            :scroll="{ y: 200 }"
+            :scroll="{ y: tableScrollY.alarm }"
             size="small"
-            class="dark-table"
+            class="dark-table table-scroll"
           >
             <template slot="deviceNo" slot-scope="text">
               <span class="highlight-orange">{{ text }}</span>
@@ -310,6 +310,15 @@ export default {
       currentDateTime: '',
       safeDays: 3751,
       charts: {},
+      timer: null,
+      autoScrollTimers: [],
+      tableScrollY: {
+        inspection: 180,
+        firstPass: 150,
+        production: 280,
+        maintenance: 180,
+        alarm: 200
+      },
       equipmentStatus: [
         { name: '运行', value: 50, color: colors.accentGreen },
         { name: '闲置', value: 50, color: colors.accentYellow },
@@ -400,8 +409,12 @@ export default {
     }
   },
   mounted() {
+    this.extendTableData()
+    this.updateTableScrollY()
     this.updateDateTime()
     this.timer = setInterval(this.updateDateTime, 1000)
+    this.initAutoScroll()
+    window.addEventListener('resize', this.updateTableScrollY)
     this.$nextTick(() => {
       this.initEquipmentCharts()
       this.initProgressCharts()
@@ -411,6 +424,8 @@ export default {
     if (this.timer) {
       clearInterval(this.timer)
     }
+    this.autoScrollTimers.forEach(timer => clearInterval(timer))
+    window.removeEventListener('resize', this.updateTableScrollY)
     Object.values(this.charts).forEach(chart => {
       if (chart) {
         chart.dispose()
@@ -418,6 +433,56 @@ export default {
     })
   },
   methods: {
+    updateTableScrollY() {
+      const viewportHeight = window.innerHeight || 1080
+      const ratio = Math.max(0.8, Math.min(1.25, viewportHeight / 1080))
+      this.tableScrollY = {
+        inspection: Math.round(180 * ratio),
+        firstPass: Math.round(150 * ratio),
+        production: Math.round(280 * ratio),
+        maintenance: Math.round(180 * ratio),
+        alarm: Math.round(200 * ratio)
+      }
+    },
+    initAutoScroll() {
+      const scrollTargets = [
+        { key: 'inspectionData', interval: 2500 },
+        { key: 'firstPassData', interval: 2600 },
+        { key: 'productionLineData', interval: 2700 },
+        { key: 'maintenanceData', interval: 2800 },
+        { key: 'alarmData', interval: 2400 }
+      ]
+
+      this.autoScrollTimers = scrollTargets.map(target => {
+        return setInterval(() => {
+          const list = this[target.key]
+          if (!Array.isArray(list) || list.length < 2) {
+            return
+          }
+          list.push(list.shift())
+        }, target.interval)
+      })
+    },
+    extendTableData() {
+      const cloneRows = (rows, repeat) => {
+        const generated = []
+        for (let i = 0; i < repeat; i += 1) {
+          rows.forEach((row, idx) => {
+            generated.push({
+              ...row,
+              key: `${row.key}-${i}-${idx}`
+            })
+          })
+        }
+        return generated
+      }
+
+      this.inspectionData = cloneRows(this.inspectionData, 3)
+      this.firstPassData = cloneRows(this.firstPassData, 3)
+      this.productionLineData = cloneRows(this.productionLineData, 2)
+      this.maintenanceData = cloneRows(this.maintenanceData, 3)
+      this.alarmData = cloneRows(this.alarmData, 4)
+    },
     updateDateTime() {
       const now = new Date()
       const year = now.getFullYear()
@@ -572,8 +637,10 @@ export default {
 @accent-blue: #448aff;
 
 .dashboard-container {
-  width: 1920px;
-  height: 1080px;
+  width: 100vw;
+  min-width: 1366px;
+  height: 100vh;
+  min-height: 760px;
   background: linear-gradient(135deg, @bg-primary 0%, @bg-secondary 100%);
   padding: 16px;
   box-sizing: border-box;
@@ -669,7 +736,7 @@ export default {
 }
 
 .left-section {
-  width: 420px;
+  width: clamp(320px, 22vw, 420px);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -683,7 +750,7 @@ export default {
 }
 
 .right-section {
-  width: 380px;
+  width: clamp(320px, 20vw, 380px);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -873,10 +940,11 @@ export default {
 
 .progress-monitor {
   flex: 1;
+  min-height: 320px;
 
   .monitor-sections {
     display: flex;
-    gap: 24px;
+    gap: 12px;
 
     .monitor-item {
       flex: 1;
@@ -897,7 +965,7 @@ export default {
       .monitor-content {
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 12px;
 
         .chart-wrapper {
           width: 80px;
@@ -956,6 +1024,11 @@ export default {
 
 .alarm-records {
   flex: 1;
+}
+
+.table-scroll {
+  flex: 1;
+  min-height: 0;
 }
 
 // 进度条
