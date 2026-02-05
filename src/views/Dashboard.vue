@@ -1,6 +1,5 @@
 <template>
   <div class="dashboard-container">
-    <!-- 顶部区域 -->
     <div class="header">
       <div class="safe-days">
         <span class="label">安全生产天数</span>
@@ -17,22 +16,14 @@
       <div class="datetime">{{ currentDateTime }}</div>
     </div>
 
-    <!-- 主体内容 -->
     <div class="main-content">
-      <!-- 左侧区域 -->
       <div class="left-section">
-        <!-- 设备状态 -->
         <div class="panel equipment-status">
           <div class="panel-title-bar">
             <div class="title-indicator"></div>
             <span>设备状态</span>
           </div>
-          <div class="panel-corners">
-            <span class="corner tl"></span>
-            <span class="corner tr"></span>
-            <span class="corner bl"></span>
-            <span class="corner br"></span>
-          </div>
+          <div class="panel-corners"><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span></div>
           <div class="status-charts">
             <div class="status-item" v-for="item in equipmentStatus" :key="item.name">
               <div class="chart-wrapper" :ref="'equipmentChart_' + item.name"></div>
@@ -41,241 +32,120 @@
           </div>
         </div>
 
-        <!-- 近24小时半成品检验信息 -->
         <div class="panel inspection-info">
-          <div class="panel-title-bar">
-            <div class="title-indicator"></div>
-            <span>近24小时半成品检验信息</span>
-          </div>
-          <div class="panel-corners">
-            <span class="corner tl"></span>
-            <span class="corner tr"></span>
-            <span class="corner bl"></span>
-            <span class="corner br"></span>
-          </div>
+          <div class="panel-title-bar"><div class="title-indicator"></div><span>近24小时半成品检验信息</span></div>
+          <div class="panel-corners"><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span></div>
           <div class="stats-row">
             <div class="stat-card" v-for="stat in inspectionStats" :key="stat.label">
               <div class="stat-value">{{ stat.value }}</div>
               <div class="stat-label">{{ stat.label }}</div>
             </div>
           </div>
-          <a-table
-            :columns="inspectionColumns"
-            :data-source="inspectionData"
-            :pagination="false"
-            :scroll="{ y: tableScrollY.inspection }"
-            size="small"
-            class="dark-table table-scroll"
-          >
-            <template slot="result" slot-scope="text">
-              <span :class="['status-tag', getResultClass(text)]">{{ text }}</span>
-            </template>
-          </a-table>
+          <div class="css-table table-scroll" :style="{ '--table-height': tableScrollY.inspection + 'px' }">
+            <div class="table-head" :style="inspectionGridStyle"><span v-for="col in inspectionColumns" :key="col.key">{{ col.title }}</span></div>
+            <div class="table-body linear-scroll" :style="getScrollStyle(inspectionData.length, 23)">
+              <div class="table-track">
+                <div class="table-row" :style="inspectionGridStyle" v-for="row in inspectionLoopData" :key="row.loopKey">
+                  <span>{{ row.batchNo }}</span><span>{{ row.materialNo }}</span><span>{{ row.materialName }}</span>
+                  <span><span :class="['status-tag', getResultClass(row.result)]">{{ row.result }}</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- 一次合格率 -->
         <div class="panel first-pass-rate">
-          <div class="panel-title-bar">
-            <div class="title-indicator"></div>
-            <span>一次合格率</span>
+          <div class="panel-title-bar"><div class="title-indicator"></div><span>一次合格率</span></div>
+          <div class="panel-corners"><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span></div>
+          <div class="css-table table-scroll" :style="{ '--table-height': tableScrollY.firstPass + 'px' }">
+            <div class="table-head" :style="firstPassGridStyle"><span v-for="col in firstPassColumns" :key="col.key">{{ col.title }}</span></div>
+            <div class="table-body linear-scroll" :style="getScrollStyle(firstPassData.length, 24)">
+              <div class="table-track">
+                <div class="table-row" :style="firstPassGridStyle" v-for="row in firstPassLoopData" :key="row.loopKey">
+                  <span>{{ row.materialNo }}</span><span>{{ row.materialName }}</span><span class="highlight-orange">{{ row.rate }}</span><span>{{ row.rank }}</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="panel-corners">
-            <span class="corner tl"></span>
-            <span class="corner tr"></span>
-            <span class="corner bl"></span>
-            <span class="corner br"></span>
-          </div>
-          <a-table
-            :columns="firstPassColumns"
-            :data-source="firstPassData"
-            :pagination="false"
-            :scroll="{ y: tableScrollY.firstPass }"
-            size="small"
-            class="dark-table table-scroll"
-          >
-            <template slot="rate" slot-scope="text">
-              <span class="highlight-orange">{{ text }}</span>
-            </template>
-          </a-table>
         </div>
       </div>
 
-      <!-- 中间区域 -->
       <div class="center-section">
-        <!-- 产线状态表格 -->
         <div class="panel production-line">
-          <div class="panel-corners">
-            <span class="corner tl"></span>
-            <span class="corner tr"></span>
-            <span class="corner bl"></span>
-            <span class="corner br"></span>
-          </div>
-          <a-table
-            :columns="productionLineColumns"
-            :data-source="productionLineData"
-            :pagination="false"
-            :scroll="{ y: tableScrollY.production }"
-            size="small"
-            class="dark-table table-scroll"
-          >
-            <template slot="status" slot-scope="text">
-              <span v-if="text" :class="['status-tag', getStatusClass(text)]">{{ text }}</span>
-            </template>
-            <template slot="progress" slot-scope="text">
-              <div class="progress-cell" v-if="text">
-                <div class="progress-bg"></div>
-                <div class="progress-bar" :style="{ width: text }">
-                  <span class="progress-text">{{ text }}</span>
+          <div class="panel-corners"><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span></div>
+          <div class="css-table table-scroll" :style="{ '--table-height': tableScrollY.production + 'px' }">
+            <div class="table-head" :style="productionGridStyle"><span v-for="col in productionLineColumns" :key="col.key">{{ col.title }}</span></div>
+            <div class="table-body linear-scroll" :style="getScrollStyle(productionLineData.length, 20)">
+              <div class="table-track">
+                <div class="table-row" :style="productionGridStyle" v-for="row in productionLoopData" :key="row.loopKey">
+                  <span>{{ row.line }}</span>
+                  <span><span v-if="row.status" :class="['status-tag', getStatusClass(row.status)]">{{ row.status }}</span></span>
+                  <span>{{ row.planned }}</span><span>{{ row.pending }}</span><span>{{ row.completed }}</span><span>{{ row.currentBatch }}</span><span>{{ row.totalSteps }}</span><span>{{ row.currentStep }}</span>
+                  <span>
+                    <div class="progress-cell" v-if="row.progress">
+                      <div class="progress-bg"></div>
+                      <div class="progress-bar" :style="{ width: row.progress }"><span class="progress-text">{{ row.progress }}</span></div>
+                    </div>
+                  </span>
                 </div>
               </div>
-            </template>
-          </a-table>
+            </div>
+          </div>
         </div>
 
-        <!-- 进度监控 -->
         <div class="panel progress-monitor">
-          <div class="panel-title-bar">
-            <div class="title-indicator"></div>
-            <span>进度监控</span>
-          </div>
-          <div class="panel-corners">
-            <span class="corner tl"></span>
-            <span class="corner tr"></span>
-            <span class="corner bl"></span>
-            <span class="corner br"></span>
-          </div>
+          <div class="panel-title-bar"><div class="title-indicator"></div><span>进度监控</span></div>
+          <div class="panel-corners"><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span></div>
           <div class="monitor-sections">
-            <!-- 月度生产进度监控 -->
             <div class="monitor-item">
               <div class="monitor-title">月度生产进度监控</div>
-              <div class="monitor-content">
-                <div class="chart-wrapper" ref="monthlyProgressChart"></div>
-                <div class="monitor-stats">
-                  <div class="stat-row">
-                    <span class="label">计划产量：</span>
-                    <span class="value">10000</span>
-                  </div>
-                  <div class="stat-row">
-                    <span class="label">累计产量：</span>
-                    <span class="value">10000</span>
-                  </div>
-                  <div class="stat-row">
-                    <span class="label">剩余产量：</span>
-                    <span class="value">10000</span>
-                  </div>
-                </div>
-              </div>
+              <div class="monitor-content"><div class="chart-wrapper" ref="monthlyProgressChart"></div><div class="monitor-stats"><div class="stat-row"><span class="label">计划产量：</span><span class="value">10000</span></div><div class="stat-row"><span class="label">累计产量：</span><span class="value">10000</span></div><div class="stat-row"><span class="label">剩余产量：</span><span class="value">10000</span></div></div></div>
             </div>
-
-            <!-- 日度生产进度监控 -->
             <div class="monitor-item">
               <div class="monitor-title">日度生产进度监控</div>
-              <div class="monitor-content">
-                <div class="chart-wrapper" ref="dailyProgressChart"></div>
-                <div class="monitor-stats">
-                  <div class="stat-row">
-                    <span class="label">计划产量：</span>
-                    <span class="value">10000</span>
-                  </div>
-                  <div class="stat-row">
-                    <span class="label">累计产量：</span>
-                    <span class="value">10000</span>
-                  </div>
-                  <div class="stat-row">
-                    <span class="label">剩余产量：</span>
-                    <span class="value">10000</span>
-                  </div>
-                </div>
-              </div>
+              <div class="monitor-content"><div class="chart-wrapper" ref="dailyProgressChart"></div><div class="monitor-stats"><div class="stat-row"><span class="label">计划产量：</span><span class="value">10000</span></div><div class="stat-row"><span class="label">累计产量：</span><span class="value">10000</span></div><div class="stat-row"><span class="label">剩余产量：</span><span class="value">10000</span></div></div></div>
             </div>
-
-            <!-- 巡检任务进度监控 -->
             <div class="monitor-item">
               <div class="monitor-title">巡检任务进度监控</div>
-              <div class="monitor-content">
-                <div class="chart-wrapper" ref="inspectionProgressChart"></div>
-                <div class="monitor-stats">
-                  <div class="stat-row">
-                    <span class="label">巡检任务：</span>
-                    <span class="value">10000</span>
-                  </div>
-                  <div class="stat-row">
-                    <span class="label">已完成任务：</span>
-                    <span class="value">10000</span>
-                  </div>
-                  <div class="stat-row">
-                    <span class="label">剩余任务：</span>
-                    <span class="value">10000</span>
-                  </div>
-                </div>
-              </div>
+              <div class="monitor-content"><div class="chart-wrapper" ref="inspectionProgressChart"></div><div class="monitor-stats"><div class="stat-row"><span class="label">巡检任务：</span><span class="value">10000</span></div><div class="stat-row"><span class="label">已完成任务：</span><span class="value">10000</span></div><div class="stat-row"><span class="label">剩余任务：</span><span class="value">10000</span></div></div></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 右侧区域 -->
       <div class="right-section">
-        <!-- 维保任务 -->
         <div class="panel maintenance-tasks">
           <div class="panel-header">
-            <div class="panel-title-bar" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
-              <div class="title-indicator"></div>
-              <span>维保任务（10）</span>
-            </div>
-            <div class="task-summary">
-              <span class="pending">待处理：<em>2</em></span>
-              <span class="processing">进行中：<em>1</em></span>
-              <span class="completed">已完成：<em>1</em></span>
+            <div class="panel-title-bar" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;"><div class="title-indicator"></div><span>维保任务（10）</span></div>
+            <div class="task-summary"><span class="pending">待处理：<em>2</em></span><span class="processing">进行中：<em>1</em></span><span class="completed">已完成：<em>1</em></span></div>
+          </div>
+          <div class="panel-corners"><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span></div>
+          <div class="css-table table-scroll" :style="{ '--table-height': tableScrollY.maintenance + 'px' }">
+            <div class="table-head" :style="maintenanceGridStyle"><span v-for="col in maintenanceColumns" :key="col.key">{{ col.title }}</span></div>
+            <div class="table-body linear-scroll" :style="getScrollStyle(maintenanceData.length, 22)">
+              <div class="table-track">
+                <div class="table-row" :style="maintenanceGridStyle" v-for="row in maintenanceLoopData" :key="row.loopKey">
+                  <span>{{ row.deviceNo }}</span><span>{{ row.deviceName }}</span><span>{{ row.maintainer }}</span>
+                  <span><span :class="['status-tag', getMaintenanceStatusClass(row.status)]">{{ row.status }}</span></span>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="panel-corners">
-            <span class="corner tl"></span>
-            <span class="corner tr"></span>
-            <span class="corner bl"></span>
-            <span class="corner br"></span>
-          </div>
-          <a-table
-            :columns="maintenanceColumns"
-            :data-source="maintenanceData"
-            :pagination="false"
-            :scroll="{ y: tableScrollY.maintenance }"
-            size="small"
-            class="dark-table table-scroll"
-          >
-            <template slot="status" slot-scope="text">
-              <span :class="['status-tag', getMaintenanceStatusClass(text)]">{{ text }}</span>
-            </template>
-          </a-table>
         </div>
 
-        <!-- 告警记录 -->
         <div class="panel alarm-records">
-          <div class="panel-title-bar">
-            <div class="title-indicator"></div>
-            <span>告警记录（999+）</span>
+          <div class="panel-title-bar"><div class="title-indicator"></div><span>告警记录（999+）</span></div>
+          <div class="panel-corners"><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span></div>
+          <div class="css-table table-scroll" :style="{ '--table-height': tableScrollY.alarm + 'px' }">
+            <div class="table-head" :style="alarmGridStyle"><span v-for="col in alarmColumns" :key="col.key">{{ col.title }}</span></div>
+            <div class="table-body linear-scroll" :style="getScrollStyle(alarmData.length, 18)">
+              <div class="table-track">
+                <div class="table-row" :style="alarmGridStyle" v-for="row in alarmLoopData" :key="row.loopKey">
+                  <span class="highlight-orange">{{ row.deviceNo }}</span><span>{{ row.deviceName }}</span><span>{{ row.alarmTime }}</span><span class="highlight-red">{{ row.alarmInfo }}</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="panel-corners">
-            <span class="corner tl"></span>
-            <span class="corner tr"></span>
-            <span class="corner bl"></span>
-            <span class="corner br"></span>
-          </div>
-          <a-table
-            :columns="alarmColumns"
-            :data-source="alarmData"
-            :pagination="false"
-            :scroll="{ y: tableScrollY.alarm }"
-            size="small"
-            class="dark-table table-scroll"
-          >
-            <template slot="deviceNo" slot-scope="text">
-              <span class="highlight-orange">{{ text }}</span>
-            </template>
-            <template slot="alarmInfo" slot-scope="text">
-              <span class="highlight-red">{{ text }}</span>
-            </template>
-          </a-table>
         </div>
       </div>
     </div>
@@ -311,7 +181,6 @@ export default {
       safeDays: 3751,
       charts: {},
       timer: null,
-      autoScrollTimers: [],
       tableScrollY: {
         inspection: 180,
         firstPass: 150,
@@ -406,6 +275,36 @@ export default {
   computed: {
     safeDaysDigits() {
       return this.safeDays.toString().padStart(6, '0').split('')
+    },
+    inspectionGridStyle() {
+      return { gridTemplateColumns: '2fr 1.35fr 2fr 1fr' }
+    },
+    firstPassGridStyle() {
+      return { gridTemplateColumns: '1.2fr 2fr 1fr 0.5fr' }
+    },
+    productionGridStyle() {
+      return { gridTemplateColumns: '1.1fr 0.9fr 1fr 1fr 1fr 1.7fr 0.8fr 0.8fr 1.2fr' }
+    },
+    maintenanceGridStyle() {
+      return { gridTemplateColumns: '1fr 1.2fr 0.8fr 0.8fr' }
+    },
+    alarmGridStyle() {
+      return { gridTemplateColumns: '0.9fr 1fr 1fr 1.3fr' }
+    },
+    inspectionLoopData() {
+      return this.getLoopData(this.inspectionData)
+    },
+    firstPassLoopData() {
+      return this.getLoopData(this.firstPassData)
+    },
+    productionLoopData() {
+      return this.getLoopData(this.productionLineData)
+    },
+    maintenanceLoopData() {
+      return this.getLoopData(this.maintenanceData)
+    },
+    alarmLoopData() {
+      return this.getLoopData(this.alarmData)
     }
   },
   mounted() {
@@ -413,7 +312,6 @@ export default {
     this.updateTableScrollY()
     this.updateDateTime()
     this.timer = setInterval(this.updateDateTime, 1000)
-    this.initAutoScroll()
     window.addEventListener('resize', this.updateTableScrollY)
     this.$nextTick(() => {
       this.initEquipmentCharts()
@@ -424,7 +322,6 @@ export default {
     if (this.timer) {
       clearInterval(this.timer)
     }
-    this.autoScrollTimers.forEach(timer => clearInterval(timer))
     window.removeEventListener('resize', this.updateTableScrollY)
     Object.values(this.charts).forEach(chart => {
       if (chart) {
@@ -439,29 +336,23 @@ export default {
       this.tableScrollY = {
         inspection: Math.round(180 * ratio),
         firstPass: Math.round(150 * ratio),
-        production: Math.round(280 * ratio),
-        maintenance: Math.round(180 * ratio),
-        alarm: Math.round(200 * ratio)
+        production: Math.round(340 * ratio),
+        maintenance: Math.round(170 * ratio),
+        alarm: Math.round(180 * ratio)
       }
     },
-    initAutoScroll() {
-      const scrollTargets = [
-        { key: 'inspectionData', interval: 2500 },
-        { key: 'firstPassData', interval: 2600 },
-        { key: 'productionLineData', interval: 2700 },
-        { key: 'maintenanceData', interval: 2800 },
-        { key: 'alarmData', interval: 2400 }
-      ]
-
-      this.autoScrollTimers = scrollTargets.map(target => {
-        return setInterval(() => {
-          const list = this[target.key]
-          if (!Array.isArray(list) || list.length < 2) {
-            return
-          }
-          list.push(list.shift())
-        }, target.interval)
-      })
+    getLoopData(data) {
+      if (!Array.isArray(data) || !data.length) {
+        return []
+      }
+      return data.concat(data).map((item, index) => ({
+        ...item,
+        loopKey: `${item.key}-${index}`
+      }))
+    },
+    getScrollStyle(length, speed = 26) {
+      const duration = Math.max(10, Math.round((length || 1) * speed / 10))
+      return { '--scroll-duration': `${duration}s` }
     },
     extendTableData() {
       const cloneRows = (rows, repeat) => {
@@ -938,46 +829,51 @@ export default {
   }
 }
 
-.progress-monitor {
+.production-line {
   flex: 1;
-  min-height: 320px;
+  min-height: clamp(320px, 43vh, 520px);
+}
+
+.progress-monitor {
+  flex: 0.45;
+  min-height: 220px;
 
   .monitor-sections {
     display: flex;
-    gap: 12px;
+    gap: 10px;
 
     .monitor-item {
       flex: 1;
-      padding: 16px;
+      padding: 12px;
       background: fade(@accent-cyan, 3%);
       border: 1px solid fade(@border-primary, 60%);
       border-radius: 4px;
 
       .monitor-title {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         color: @text-primary;
-        margin-bottom: 16px;
-        padding-bottom: 8px;
+        margin-bottom: 12px;
+        padding-bottom: 6px;
         border-bottom: 1px dashed @border-primary;
       }
 
       .monitor-content {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
 
         .chart-wrapper {
-          width: 80px;
-          height: 80px;
+          width: 68px;
+          height: 68px;
         }
 
         .monitor-stats {
           flex: 1;
 
           .stat-row {
-            margin-bottom: 10px;
-            font-size: 14px;
+            margin-bottom: 7px;
+            font-size: 12px;
             display: flex;
             justify-content: space-between;
 
@@ -1069,54 +965,68 @@ export default {
   }
 }
 
-// 深色表格样式
-.dark-table {
-  /deep/ .ant-table {
-    background: transparent;
-    color: @text-secondary;
+.css-table {
+  height: var(--table-height);
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid fade(@border-primary, 60%);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(8, 28, 52, 0.88), rgba(5, 22, 42, 0.88));
+  overflow: hidden;
 
-    .ant-table-thead > tr > th {
-      background: fade(@accent-cyan, 10%);
-      color: @accent-cyan;
-      border-bottom: 1px solid @border-primary;
-      text-shadow: 0 0 5px fade(@accent-cyan, 30%);
-      font-weight: 600;
-    }
+  .table-head,
+  .table-row {
+    display: grid;
+    align-items: center;
+    column-gap: 12px;
+    padding: 0 12px;
 
-    .ant-table-tbody > tr > td {
-      background: transparent;
-      color: @text-secondary;
-      border-bottom: 1px solid fade(@border-primary, 40%);
-    }
-
-    .ant-table-tbody > tr:hover > td {
-      background: fade(@accent-cyan, 5%);
-    }
-
-    .ant-table-placeholder {
-      background: transparent;
-      color: @text-muted;
+    > span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 
-  /deep/ .ant-table-body {
-    &::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+  .table-head {
+    height: 44px;
+    color: @accent-cyan;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid fade(@border-primary, 55%);
+    background: linear-gradient(180deg, rgba(0, 212, 255, 0.12), rgba(0, 212, 255, 0.04));
+  }
+
+  .table-body {
+    flex: 1;
+    overflow: hidden;
+    color: #9cc7f3;
+
+    .table-track {
+      animation: table-linear-scroll var(--scroll-duration, 18s) linear infinite;
     }
 
-    &::-webkit-scrollbar-track {
-      background: @bg-secondary;
+    &:hover .table-track {
+      animation-play-state: paused;
     }
+  }
 
-    &::-webkit-scrollbar-thumb {
-      background: @border-primary;
-      border-radius: 3px;
+  .table-row {
+    height: 54px;
+    font-size: 13px;
+    border-bottom: 1px solid fade(@border-primary, 35%);
 
-      &:hover {
-        background: @accent-cyan;
-      }
+    &:nth-child(odd) {
+      background: fade(@accent-cyan, 2%);
     }
   }
 }
+
+@keyframes table-linear-scroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
 </style>
